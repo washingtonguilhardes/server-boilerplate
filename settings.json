@@ -1,0 +1,18 @@
+{
+  "production": {
+    "port": 80,
+    "host": "http://production-host.com.br",
+    "mongouri": "mongodb://MDatabase:MDatabasePass@127.0.0.1:27017/"
+  },
+  "debug": {
+      "port": 80,
+      "host": "http://debug-host.com.br",
+      "mongouri": "mongodb://MDatabase:MDatabasePass@127.0.0.1:27017/"
+    },
+  "development": {
+    "port": 3000,
+    "host": "127.0.0.1",
+    "mongouri": "mongodb://127.0.0.1:27017/"
+  },
+  "dbName": "MDatabase"
+}

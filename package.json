@@ -1,0 +1,30 @@
+{
+  "name": "server-boilerplate",
+  "version": "v1.0.0-delta-1",
+  "scripts": {
+    "start": "node run.js",
+    "test": ""
+  },
+  "description": "Code from the React tutorial.",
+  "main": "index.js",
+  "dependencies": {
+    "body-parser": "1.17.2",
+    "compression": "1.7.0",
+    "es6-promise": "4.1.1",
+    "express": "4.15.4",
+    "express-session": "^1.15.4",
+    "http": "0.0.0",
+    "https": "1.0.0",
+    "js-md5": "0.6.0",
+    "moment": "2.18.1",
+    "mongoose": "4.11.10",
+    "morgan": "^1.8.2",
+    "ms": "2.0.0",
+    "node-sass": "4.5.3",
+    "pug": "^2.0.0-rc.2",
+    "serve-favicon": "^2.4.3",
+    "session-file-store": "latest",
+    "socket.io": "2.0.3",
+    "clone": "latest"
+  }
+}
