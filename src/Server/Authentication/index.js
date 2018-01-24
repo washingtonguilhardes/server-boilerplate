@@ -1,4 +1,3 @@
-import User from "./../Models/User";
 import Utils from "./../Utils/Utils";
 import jwt from "jsonwebtoken";
 import ms from "ms";

@@ -38,7 +38,6 @@ const sysDataMidleware = (filter = {}) => async (req, res, next) => {
 export default class Server {
 
     constructor(appName = "my awesome app") {
-
         this.app = Express();
         this._appName = appName;
         this.httpServer = null;
@@ -59,6 +58,7 @@ export default class Server {
     static Express = Express;
     static Constants = Constants;
     static Authentication = Authentication;
+
 
     /**
      *
@@ -415,7 +415,7 @@ export default class Server {
 
     /**
      *
-     * @param _appName
+     * @param [_appName]
      * @return {Server}
      */
     static getInstance(_appName) {

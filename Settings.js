@@ -67,5 +67,6 @@ export const getVersion = () => _package.version;
 
 export default {
     getVersion,
-    defaultSettings: settings
+    getDatabaseSettings,
+    defaultSettings: settings,
 };

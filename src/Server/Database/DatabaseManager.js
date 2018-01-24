@@ -1,12 +1,15 @@
 import mongoose from "mongoose";
 import Settings from "./../../../Settings";
 import Meta from "./../Models/Metas";
-const ErrorHandler = require("./../Utils/ErrorHandler");
+import ErrorHandler from "./../Utils/ErrorHandler";
 
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
-class DatabaseManager extends ErrorHandler {
+
+export default class DatabaseManager extends ErrorHandler {
+
+    static modelsRegitered = {};
 
     /**
      *
@@ -428,7 +431,7 @@ class DatabaseManager extends ErrorHandler {
     /**
      *
      * @param collectionName
-     * @param {mongoose.Schema} [schema]
+     * @param {Schema} [schema]
      * @return {mongoose.model}
      */
     static getCollection(collectionName, schema = new Schema({})) {
@@ -440,7 +443,3 @@ class DatabaseManager extends ErrorHandler {
         return DatabaseManager.modelsRegitered[collectionName];
     }
 }
-
-DatabaseManager.modelsRegitered = {};
-
-module.exports = exports = DatabaseManager;

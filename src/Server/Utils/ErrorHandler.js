@@ -1,4 +1,5 @@
 import Settings from "./../../../Settings";
+import Server from "./../../Server"
 
 class ErrorHandler {
     set collection(collection) {
@@ -63,7 +64,7 @@ Error.prototype.toJSON = function () {
         context = undefined;
     }
     const ret = {
-        name: `'Visity_${Settings.getVersion()} >> ${this.name}`,
+        name: `'${Server.getInstance().getAppName()}_${Settings.getVersion()} >> ${this.name}`,
         message: this.message,
         context: context || "Global",
         time: new Date(),
@@ -96,4 +97,4 @@ Error.prototype.toJSON = function () {
 //};
 
 
-module.exports = exports = ErrorHandler;
+export default ErrorHandler;

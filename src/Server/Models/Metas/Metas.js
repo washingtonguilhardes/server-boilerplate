@@ -1,5 +1,6 @@
-const mongoose = require("mongoose");
-const MetaSchema = require("./MetaSchema");
+import mongoose from "mongoose";
+import MetaSchema from "./MetaSchema";
+
 const MetaModel = mongoose.model("Metas", MetaSchema, "Metas");
 
 export default class Metas {
@@ -23,7 +24,7 @@ export default class Metas {
 
     async save(meta) {
         let toInsert = meta;
-        if (meta instanceof Meta) {
+        if (meta instanceof Metas) {
             toInsert = meta.item;
         }
         const _item = new MetaModel(toInsert || this.item);
@@ -36,47 +37,45 @@ export default class Metas {
         return this.save(meta);
     }
 
-    update(_id = this.getId(), meta) {
+    async update(_id = this.getId(), meta) {
         let toUpdate = meta;
-        if (meta instanceof Meta) {
+        if (meta instanceof Metas) {
             toUpdate = meta.item;
         }
         return MetaModel.update({_id}, {$set: toUpdate || this.item});
     }
 
-    get(filter) {
-        if (filter instanceof String) {
-            filter = {_id: filter};
-        }
-
-        return MetaModel.findOne(filter);
-
-    }
-
-    list(filter) {
-        if (!filter) {
-            throw new Error("Invalid filter parse to __(meta instance).list");
-        }
-        if (filter.constructor === String) {
-            filter = {name: new RegExp(filter, "ig")};
-        }
-        return MetaModel.find(filter);
-    }
+    //async get(filter) {
+    //    if (filter instanceof String) {
+    //        filter = {_id: filter};
+    //    }
+    //    return await MetaModel.findOne(filter);
+    //}
+    //
+    //async list(filter) {
+    //    if (!filter) {
+    //        throw new Error("Invalid filter parse to __(meta instance).list");
+    //    }
+    //    if (filter.constructor === String) {
+    //        filter = {name: new RegExp(filter, "ig")};
+    //    }
+    //    return await MetaModel.find(filter);
+    //}
 
     async remove(filter = String(this.getId())) {
         if (filter.constructor === String) {
             filter = {_id: filter};
         }
-        return MetaModel.remove(filter).exec();
+        return await MetaModel.remove(filter).exec();
     }
 
     /**
      *
      * @param data
-     * @return {Meta}
+     * @return {Metas}
      */
     static getInstance(data) {
-        return new Meta(data);
+        return new Metas(data);
     }
 
 
