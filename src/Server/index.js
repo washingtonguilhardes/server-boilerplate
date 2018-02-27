@@ -1,8 +1,7 @@
 import multer from "multer";
 import graphQLHTTP from "express-graphql";
-//import ObjectId from "bson-objectid";
-//import schema from "./Schema";
 import Schema, { AuthSchema } from "./Schema";
+import os from "os";
 
 import http from "http";
 import https from "https";
@@ -17,9 +16,11 @@ import FileStore from "session-file-store";
 import morgan from "morgan";
 import compression from "compression";
 import Database from "./Database";
-import { getEnvSettings } from "./../../Settings"
+import { getEnvSettings } from "./Settings"
 import Authentication from "./Authentication";
 import { Constants, Models } from "./Models";
+import moment from "moment";
+import _package from "./../../package.json";
 
 const privateKey = fs.readFileSync(path.join(__dirname, "ssl", "your_private.key"), "utf8");
 const certificate = fs.readFileSync(path.join(__dirname, "ssl", "your_private.crt"), "utf8");
@@ -31,13 +32,12 @@ const SERVICE_GRAPHQL_AUTH = "SERVICE_GRAPHQL_AUTH";
 
 // PUT your system comon data loader here;
 const sysDataMidleware = (filter = {}) => async (req, res, next) => {
-    console.log("sysDataMidleware LOADER");
     next();
 };
 
 export default class Server {
 
-    constructor(appName = "my awesome app") {
+    constructor(appName = "MyAwesomeApp", mode) {
         this.app = Express();
         this._appName = appName;
         this.httpServer = null;
@@ -45,8 +45,17 @@ export default class Server {
         this.settings = getEnvSettings();
         this.events = [];
         this.servicesEnabled = [];
+        this.PWD = process.env.PWD;
         Server.APP = this;
-        console.log(`>>>>>> ${this.getAppName().toUpperCase()} RUNING IN ${process.env.PWD} | PID: ${process.pid} <<<<<<`);
+        this.ready = false;
+        return new Proxy(this, {
+            get(target, name) {
+                if (name in target) {
+                    return target[name];
+                }
+                return target.getPureServer()[name];
+            }
+        });
     }
 
     static APP = null;
@@ -59,6 +68,64 @@ export default class Server {
     static Constants = Constants;
     static Authentication = Authentication;
 
+    /**
+     *
+     * @return {Server}
+     */
+    initLog() {
+        process.stdout.write('\x1Bc');
+        const cols = process.stdout.columns;
+        let header = '';
+        let bottom = '';
+        for (let i = 0; i < cols; ++i) {
+            header += '=';
+            bottom += '-';
+        }
+        const logs = [];
+        logs.push(`| App      |   ${this.getAppName()}`);
+        logs.push(`| Version  |   ${_package.version} (${this.getLastCommit()})`);
+        logs.push(`| Arch     |   ${process.arch}`);
+        logs.push(`| UID      |   ${process.getuid()}`);
+        logs.push(`| PID      |   ${process.pid}`);
+        logs.push(`| ENV      |   ${process.env.NODE_ENV}`);
+        logs.push(`| Node V.  |   ${process.version}`);
+        logs.push(`| Platform |   ${os.platform()}`);
+        logs.push(`| OSType   |   ${os.type}`);
+        logs.push(`| Date     |   ${moment().format('HH:mm:ss DD/MM/Y')}`);
+        const view = [];
+        logs.map(log => {
+            log = log.slice(0, cols - 1);
+            const l = log.length;
+            for (let i = 0; i < (cols - l - 1); ++i) {
+                log += ' ';
+            }
+            view.push(log + '|');
+        });
+        //logs.push(bottom);
+
+        view.unshift(header);
+        view.push(bottom);
+        console.log(view.join(os.EOL));
+        return this;
+    }
+
+    /**
+     *
+     * @return {Server}
+     */
+    notifyDone() {
+        this.ready = true;
+        return this;
+    }
+
+    isReady() {
+        return this.ready;
+    }
+
+    getShortPWD(_path = this.PWD) {
+        const arr = (_path || this.PWD).split('/');
+        return arr.length <= 2 ? arr.join('/') : ['[...]'].concat(arr.slice(arr.length - 3, arr.length)).join('/');
+    }
 
     /**
      *
@@ -69,23 +136,6 @@ export default class Server {
     }
 
     setAppName(_appName) {
-        this._appName = _appName;
-    }
-
-    /**
-     *
-     * @return {String}
-     */
-    get appName() {
-        return this._appName;
-    }
-
-    /**
-     *
-     * @param {String} _appName
-     */
-
-    set appName(_appName) {
         this._appName = _appName;
     }
 
@@ -106,6 +156,23 @@ export default class Server {
         this._app = _app;
     }
 
+    get http() {
+        if (this.httpServer) {
+            return this.httpServer;
+        }
+        this.httpServer = http.createServer(this._app);
+        return this.httpServer;
+    }
+
+    get https() {
+        if (this.httpsServer) {
+            return this.httpsServer;
+        }
+        this.httpsServer = https.createServer(credentials, this._app);
+        return this.httpsServer;
+    }
+
+
     /**
      * @param {Array} [dirs]
      * @return {Server}
@@ -116,16 +183,16 @@ export default class Server {
             const resources = path.join(process.env.PWD, "res");
             this._app.use('/public', Express.static(publicDir));
             this._app.use('/resources', Express.static(resources));
-            console.log("[  √ ] SETUP STATIC FOLDERS ");
-            console.log(`[ OK ] SETUP STATIC (/public) ${publicDir}`);
-            console.log(`[ OK ] SETUP STATIC (/resources) ${resources}`);
+            console.log("[ √ ] SETUP STATIC FOLDERS ");
+            console.log(`[ √ ] SETUP STATIC (/public) ${this.getShortPWD(publicDir)}`);
+            console.log(`[ √ ] SETUP STATIC (/resources) ${this.getShortPWD(resources)}`);
             dirs.map(dir => {
-                console.log(`[ OK ] SETUP STATIC (${dir.route}) ${dir.path}`);
+                console.log(`[ √ ] SETUP STATIC (${dir.route}) ${dir.path}`);
                 this._app.use(dir.route, Express.static(dir.path));
             });
             return this;
         } catch (e) {
-            console.log(`[ FAIL ] SETUP STATIC FOLDERS FAILT ${e.message}`);
+            console.log(`[ERR] SETUP STATIC FOLDERS FAIL ${e.message}`);
             process.exit(1);
         }
     }
@@ -140,10 +207,10 @@ export default class Server {
             }
 
             this._app.use(path, sysDataMidleware(), Router);
-            console.log(`[ OK ] SETUP CUSTOM ROUTER ${path} `);
+            console.log(`[ √ ] SETUP CUSTOM ROUTER ${path} `);
             return this;
         } catch (e) {
-            console.error(`[ FAIL ] SETUP CUSTOM ROUTER ${path} ${e.message}`);
+            console.error(`[ERR] SETUP CUSTOM ROUTER ${path} ${e.message}`);
             throw e;
         }
     }
@@ -162,7 +229,7 @@ export default class Server {
             saveUninitialized: true,
             cookie: {maxAge: 24 * 60 * 60 * 1000}
         }));
-        console.log("[ OK ] SETUP SESSION (path)");
+        console.log("[ √ ] SETUP SESSION (path)");
         return this;
     }
 
@@ -172,10 +239,14 @@ export default class Server {
      */
     setupCORS() {
         this._app.use(cors());
-        console.log("[ OK ] SETUP CROSS ORIGIN REQUESTS");
+        console.log("[ √ ] SETUP CROSS ORIGIN REQUESTS");
         return this;
     }
 
+    /**
+     *
+     * @return {Server}
+     */
     setupFileHandler() {
         try {
             if (
@@ -226,11 +297,11 @@ export default class Server {
             this._app.post("/apifiles", upload.any(), fileInsertter);
             this._app.post("/files", upload.any(), fileInsertter);
 
-            console.log(`[ OK ] SETUP FILE UPLOAD HANDLER IN ${dest} `);
+            console.log(`[ √ ] SETUP FILE UPLOAD HANDLER IN ${this.getShortPWD(dest)} `);
             this.serviceSetupEnd(SERVICE_FILE_UPLOAD);
             return this;
         } catch (e) {
-            console.log(`[ FAIL ] FILE UPLOAD HANDLER ${e.message}`);
+            console.log(`[ERR] FILE UPLOAD HANDLER ${e.message}`);
             process.exit(1);
         }
 
@@ -259,7 +330,7 @@ export default class Server {
             })));
 
         this.serviceSetupEnd(SERVICE_GRAPHQL_AUTH);
-        console.log("[ OK ] GRAPHQL AUTHENTICATION SERVER");
+        console.log("[ √ ] GRAPHQL AUTHENTICATION SERVER");
         return this;
     }
 
@@ -267,15 +338,15 @@ export default class Server {
      * Start a graphQL server payload
      * @return {Server}
      */
-    setupGraphQLServer() {
+    setupGraphQLServer(entry) {
         this._app.use(
-            '/api',
+            entry || '/api',
             bodyParser.json(),
             bodyParser.text({type: 'application/graphql'}),
             //Normaliza o usuário pelo token (joga ele para o context)
-            Authentication.authMiddleware({blockResponse: true}),
+            Authentication.authMiddleware({blockResponse: process.env.NODE_ENV === "production"}),
             //Verifica se o usuário está authenticado
-            Authentication.checkTokenMiddleware({blockResponse: false}),
+            Authentication.checkTokenMiddleware({blockResponse: process.env.NODE_ENV === "production"}),
             sysDataMidleware(),
             // Inicia o middleware do GraphQL
             graphQLHTTP(req => ({
@@ -289,17 +360,27 @@ export default class Server {
                     token: req.token,
                     systemCredit: req.systemCredit,
                     systemSettings: req.systemSettings,
-                }
+                },
+                formatError: error => console.error(error) || ({
+                    message: error.message,
+                    state: error.originalError && error.originalError.state,
+                    locations: error.locations,
+                    path: error.path,
+                })
             })));
         this.serviceSetupEnd(SERVICE_GRAPHQL_SERVER);
-        console.log("[ OK ] GRAPHQL SERVER ");
+        console.log("[ √ ] GRAPHQL SERVER ");
         return this;
     }
 
+    /**
+     *
+     * @return {Server}
+     */
     setupBody() {
         this._app.use(bodyParser.json());
         this._app.use(bodyParser.urlencoded({extended: true}));
-        console.log("[ OK ] SETUP BODY PARSER");
+        console.log("[ √ ] SETUP BODY PARSER");
         return this;
     }
 
@@ -313,7 +394,7 @@ export default class Server {
         this._app.engine("pug", pug.__express);
         this._app.set("pug", "pug");
 
-        console.log(`[ OK ] SETUP VIEW ENGINE ${views}`);
+        console.log(`[ √ ] SETUP VIEW ENGINE ${this.getShortPWD(views)}`);
         return this;
     }
 
@@ -327,7 +408,7 @@ export default class Server {
                 return true;
             }
         }));
-        console.log("[ OK ] SETUP GZIP (compression)");
+        console.log("[ √ ] SETUP GZIP (compression)");
         return this;
     }
 
@@ -337,7 +418,7 @@ export default class Server {
      */
     setupMorgan() {
         this._app.use(morgan("tiny"));
-        console.log("[ OK ] SETUP MORGAN");
+        console.log("[ √ ] SETUP MORGAN");
         return this;
     }
 
@@ -370,7 +451,7 @@ export default class Server {
                         if (e) {
                             throw e;
                         }
-                        console.log(`[ OK ] HTTP START AT: ${this._app.get("host")}:${this._app.get("port")}`);
+                        console.log(`[ √ ] HTTP START AT: ${this._app.get("host")}:${this._app.get("port")}`);
                         Promise.all(pos);
                         resolve(this.settings);
                     });
@@ -397,21 +478,49 @@ export default class Server {
         return this;
     }
 
-    get http() {
-        if (this.httpServer) {
-            return this.httpServer;
-        }
-        this.httpServer = http.createServer(this._app);
-        return this.httpServer;
+    async startDatabase(useGlobalConnection) {
+        return await  Database.init(useGlobalConnection);
     }
 
-    get https() {
-        if (this.httpsServer) {
-            return this.httpsServer;
-        }
-        this.httpsServer = https.createServer(credentials, this._app);
-        return this.httpsServer;
+    serviceSetupEnd(service) {
+        this.servicesEnabled.push(service);
     }
+
+    /**
+     *
+     * @return {Array}
+     */
+    getServices() {
+        return this.servicesEnabled;
+    }
+
+    /**
+     * Return application pure server manager like a express
+     * or koa or restify
+     * @return {Express}
+     */
+    getPureServer() {
+        return this.app;
+    }
+
+    /**
+     *
+     * @return {Server}
+     */
+    async reboot() {
+        Server.APP = null;
+        this.app = null;
+        this.httpServer = null;
+        this.httpsServer = null;
+        this.events = [];
+        this.servicesEnabled = [];
+        this.ready = false;
+
+        await Database.close();
+
+        return Server.getInstance(this._appName);
+    }
+
 
     /**
      *
@@ -425,19 +534,13 @@ export default class Server {
         return Server.APP;
     }
 
-    async startDatabase() {
-        return await  Database.init();
-    }
-
-    serviceSetupEnd(service) {
-        this.servicesEnabled.push(service);
-    }
-
-    /**
-     *
-     * @return {Array}
-     */
-    getServices() {
-        return this.servicesEnabled;
+    getLastCommit() {
+        const git = path.join(this.PWD, '.git');
+        if (!fs.existsSync(git)) {
+            return '-'
+        }
+        const head = fs.readFileSync(path.join(git, 'HEAD')).toString().replace('ref: ', '').trim();
+        const commit = fs.readFileSync(path.join(git, head)).toString().trim();
+        return `${head.split('heads')[1].replace(/^\//, '')} [${commit.slice(0, 9)}]`
     }
 }
