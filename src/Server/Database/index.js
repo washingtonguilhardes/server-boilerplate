@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Settings from "./../../../Settings";
+import Settings from "../Settings";
 import DatabaseManager from "./DatabaseManager";
 
 

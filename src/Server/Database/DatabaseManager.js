@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Settings from "./../../../Settings";
+import Settings from "../Settings";
 import Meta from "./../Models/Metas";
 import ErrorHandler from "./../Utils/ErrorHandler";
 

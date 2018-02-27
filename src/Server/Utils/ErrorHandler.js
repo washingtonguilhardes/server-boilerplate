@@ -1,4 +1,4 @@
-import Settings from "./../../../Settings";
+import Settings from "../Settings";
 import Server from "./../../Server"
 
 class ErrorHandler {

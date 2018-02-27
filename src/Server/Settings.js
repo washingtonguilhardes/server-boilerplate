@@ -1,4 +1,4 @@
-const _package = require("./package.json");
+const _package = require("../../package.json");
 const STORAGE_NAME = "custom_mya_app_sdk_name";
 const settings = {
     production: {
